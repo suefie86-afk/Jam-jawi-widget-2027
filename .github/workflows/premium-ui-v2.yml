@@ -28,13 +28,13 @@ jobs:
           p=pkg/"ConfigActivity.kt"
           block='''        controls.addView(label("Tema premium (preset warna)"))
           val themes = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-          listOf("Black Gold", "Emerald", "AMOLED").forEach { name ->
+          listOf("Original", "Black Gold", "Emerald", "AMOLED").forEach { name ->
               themes.addView(Button(this).apply {
                   text = name
                   textSize = 11f
                   setOnClickListener {
                       style = when (name) {
-                          "Black Gold" -> style.copy(clock = Color.parseColor("#E8C675"), accent = Color.parseColor("#D7B66A"), next = Color.parseColor("#F4D68D"), bg = Color.BLACK, bgAlpha = 100, bgImage = false)
+                          "Original" -> style.copy(clock = Color.YELLOW, accent = Color.GREEN, next = Color.YELLOW, bg = Color.BLACK, bgAlpha = 100, bgImage = false)\n                          "Black Gold" -> style.copy(clock = Color.parseColor("#E8C675"), accent = Color.parseColor("#D7B66A"), next = Color.parseColor("#F4D68D"), bg = Color.BLACK, bgAlpha = 100, bgImage = false)
                           "Emerald" -> style.copy(clock = Color.parseColor("#E9D38A"), accent = Color.parseColor("#8CC9A8"), next = Color.parseColor("#48E09A"), bg = Color.parseColor("#081B16"), bgAlpha = 100, bgImage = false)
                           else -> style.copy(clock = Color.WHITE, accent = Color.parseColor("#D4AF67"), next = Color.parseColor("#7EE0B1"), bg = Color.BLACK, bgAlpha = 100, bgImage = false)
                       }
