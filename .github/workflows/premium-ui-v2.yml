@@ -1,4 +1,4 @@
-name: Build Jam Jawi V7 Clean Layout APK
+name: Build Jam Jawi V8 Roman Spacing APK
 on:
   push:
     branches: [premium-test]
@@ -334,6 +334,41 @@ jobs:
           code=code.replace(anchor,anchor+'\n            rv.setViewLayoutHeight(R.id.clock_gap, st.clockGapDp.toFloat(), TypedValue.COMPLEX_UNIT_DIP)',1)
           p.write_text(code)
           print("V7 simplified prayer labels and adjustable vertical gap")
+          # V8: independent gap above Roman clock.
+          p=pkg/"Prefs.kt"
+          edit(p,'    val clockGapDp: Int = 12,','    val romanTopGapDp: Int = 12,\n    val clockGapDp: Int = 12,')
+          edit(p,'            clockGapDp = p.getInt("clockGapDp_$id",','            romanTopGapDp = p.getInt("romanTopGapDp_$id", d.romanTopGapDp),\n            clockGapDp = p.getInt("clockGapDp_$id",')
+          edit(p,'            .putInt("clockGapDp_$id",','            .putInt("romanTopGapDp_$id", s.romanTopGapDp)\n            .putInt("clockGapDp_$id",')
+          p=pkg/"ConfigActivity.kt"
+          code=p.read_text()
+          marker='        controls.addView(seek("Jarak jam Rumi ke countdown",'
+          if marker not in code: raise RuntimeError("Existing gap slider missing")
+          slider='''        controls.addView(seek("Jarak jam Jawi ke jam Rumi", 48, style.romanTopGapDp, { "${it} dp" }) {
+              style = style.copy(romanTopGapDp = it)
+              refresh()
+          })
+          '''
+          code=code.replace(marker,slider+marker,1)
+          p.write_text(code)
+          layout=root/"res/layout/widget_jawi.xml"
+          xml=layout.read_text()
+          import re
+          match=re.search(r'<TextView\\b[^>]*android:id="@\\+id/stdtime"[^>]*/>',xml,re.S)
+          if not match: raise RuntimeError("Roman clock view missing")
+          spacer='''<TextView
+              android:id="@+id/roman_top_gap"
+              android:layout_width="1dp"
+              android:layout_height="12dp" />
+          '''
+          xml=xml[:match.start()]+spacer+xml[match.start():]
+          layout.write_text(xml)
+          p=pkg/"JawiWidget.kt"
+          code=p.read_text()
+          marker='            rv.setViewLayoutHeight(R.id.clock_gap, st.clockGapDp.toFloat(), TypedValue.COMPLEX_UNIT_DIP)'
+          if marker not in code: raise RuntimeError("Existing gap renderer missing")
+          code=code.replace(marker,marker+'\n            rv.setViewLayoutHeight(R.id.roman_top_gap, st.romanTopGapDp.toFloat(), TypedValue.COMPLEX_UNIT_DIP)',1)
+          p.write_text(code)
+          print("V8 independent Roman clock vertical spacing applied")
           PY
       - name: Render moon and sun artwork
         run: |
@@ -392,5 +427,5 @@ jobs:
         run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: JamJawi-V7-Clean-Layout-APK
+          name: JamJawi-V8-Roman-Spacing-APK
           path: JawiClock/app/build/outputs/apk/debug/app-debug.apk
