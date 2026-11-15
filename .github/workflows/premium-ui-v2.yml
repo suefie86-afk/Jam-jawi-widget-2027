@@ -1,4 +1,4 @@
-name: Build Premium UI V2 APK
+name: Build Premium UI V3 Design B APK
 on:
   push:
     branches: [premium-test]
@@ -110,6 +110,33 @@ jobs:
               <corners android:radius="24dp"/>
           </shape>""")
           print("Premium UI V2 applied")
+          # Design B: optional moon + period label, adjustable size, vivid next prayer
+          p = pkg/"Prefs.kt"
+          edit(p,'    val showCountdown: Boolean = true,','    val showPeriod: Boolean = true,\n    val periodScale: Int = 100,\n    val showCountdown: Boolean = true,')
+          edit(p,'            showCountdown = p.getBoolean("countdown_$id",','            showPeriod = p.getBoolean("showPeriod_$id", d.showPeriod),\n            periodScale = p.getInt("periodScale_$id", d.periodScale),\n            showCountdown = p.getBoolean("countdown_$id",')
+          edit(p,'            .putBoolean("countdown_$id",','            .putBoolean("showPeriod_$id", s.showPeriod)\n            .putInt("periodScale_$id", s.periodScale)\n            .putBoolean("countdown_$id",')
+          p = pkg/"ConfigActivity.kt"
+          settings = '''        controls.addView(label("Paparan Malam / Pagi / Petang"))
+          controls.addView(CheckBox(this).apply {
+              text = "Ikon bulan + perkataan waktu (ON/OFF)"
+              setTextColor(Color.WHITE)
+              isChecked = style.showPeriod
+              setOnCheckedChangeListener { _, enabled ->
+                  style = style.copy(showPeriod = enabled)
+                  refresh()
+              }
+          })
+          controls.addView(seek("Saiz ikon dan perkataan waktu", 150, style.periodScale, { "${it}%" }) {
+              style = style.copy(periodScale = it.coerceAtLeast(50))
+          })
+          '''
+          edit(p,'        controls.addView(label("Tema premium (preset warna)"))',settings+'\n        controls.addView(label("Tema premium (preset warna)"))')
+          p = pkg/"JawiWidget.kt"
+          edit(p,'            rv.setTextViewText(R.id.period, Jawi.period(now))','            rv.setTextViewText(R.id.period, if (st.showPeriod) {\n                val hour = now.get(Calendar.HOUR_OF_DAY)\n                val moon = if (hour >= 19 || hour < 6) "☾  " else ""\n                moon + Jawi.period(now)\n            } else "")\n            rv.setViewVisibility(R.id.period, if (st.showPeriod) View.VISIBLE else View.GONE)')
+          edit(p,'            rv.setTextViewTextSize(R.id.period, TypedValue.COMPLEX_UNIT_SP, 20f * k)','            rv.setTextViewTextSize(R.id.period, TypedValue.COMPLEX_UNIT_SP, 20f * k * st.periodScale / 100f)')
+          edit(p,'if (i == next) st.next else if (st.dimPast && mins != null && mins[i] <= nowMin) 0xFF777777.toInt() else st.accent','if (i == next) 0xFFFFFF33.toInt() else if (st.dimPast && mins != null && mins[i] <= nowMin) 0xFF777777.toInt() else st.accent')
+          edit(p,'if (i == next) st.next else if (st.dimPast && mins != null && mins[i] <= nowMin) 0xFF888888.toInt() else st.text','if (i == next) 0xFFFFFFFF.toInt() else if (st.dimPast && mins != null && mins[i] <= nowMin) 0xFF888888.toInt() else st.text')
+          print("Design B period and vivid prayer highlight applied")
           PY
       - uses: actions/setup-java@v4
         with:
@@ -123,5 +150,5 @@ jobs:
         run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: JamJawi-Premium-UI-V2-APK
+          name: JamJawi-Design-B-APK
           path: JawiClock/app/build/outputs/apk/debug/app-debug.apk
