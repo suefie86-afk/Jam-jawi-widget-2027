@@ -1,4 +1,4 @@
-name: Build Premium UI V4 Moon Artwork APK
+name: Build Premium UI V5 Color Controls APK
 on:
   push:
     branches: [premium-test]
@@ -220,6 +220,29 @@ jobs:
           if start < 0: raise RuntimeError("Sky view missing")
           layout.write_text(layout_xml[:start]+img+layout_xml[end:])
           print("V4 source changes applied")
+          # V5: no small crescent; independent countdown and next-prayer colors.
+          p=pkg/"Prefs.kt"
+          edit(p,'    val showCountdown: Boolean = true,','    val countdownColor: Int = 0xFFFFE27B.toInt(),\n    val showCountdown: Boolean = true,')
+          edit(p,'            showCountdown = p.getBoolean("countdown_$id",','            countdownColor = p.getInt("countdownColor_$id", d.countdownColor),\n            showCountdown = p.getBoolean("countdown_$id",')
+          edit(p,'            .putBoolean("countdown_$id",','            .putInt("countdownColor_$id", s.countdownColor)\n            .putBoolean("countdown_$id",')
+          p=pkg/"ConfigActivity.kt"
+          code=p.read_text()
+          code=code.replace('Warna waktu solat seterusnya (hijau)', 'Warna highlight nama DAN jam solat seterusnya')
+          marker='        controls.addView(label("Warna latar"))'
+          if marker not in code: raise RuntimeError("Color controls insertion point missing")
+          code=code.replace(marker,'''        controls.addView(label("Warna teks countdown (asing daripada waktu solat)"))
+          controls.addView(swatches(textColors, { style.countdownColor }) { style = style.copy(countdownColor = it); refresh() })
+          '''+marker,1)
+          p.write_text(code)
+          p=pkg/"JawiWidget.kt"
+          code=p.read_text()
+          code=code.replace('moon + Jawi.period(now)', 'Jawi.period(now)')
+          code=code.replace('rv.setTextColor(R.id.countdown, st.next)', 'rv.setTextColor(R.id.countdown, st.countdownColor)')
+          # Always use saved next-prayer highlight color on both name and time.
+          code=code.replace('if (i == next) 0xFFFFFF33.toInt() else', 'if (i == next) st.next else')
+          code=code.replace('if (i == next) 0xFFFFFFFF.toInt() else', 'if (i == next) st.next else')
+          p.write_text(code)
+          print("V5: removed small moon, independent color controls enabled")
           PY
       - name: Render moon and sun artwork
         run: |
@@ -278,5 +301,5 @@ jobs:
         run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: JamJawi-V4-Moon-Artwork-APK
+          name: JamJawi-V5-Color-Controls-APK
           path: JawiClock/app/build/outputs/apk/debug/app-debug.apk
