@@ -353,7 +353,7 @@ jobs:
           layout=root/"res/layout/widget_jawi.xml"
           xml=layout.read_text()
           import re
-          match=re.search(r'<TextView\\b[^>]*android:id="@\\+id/stdtime"[^>]*/>',xml,re.S)
+          match=re.search(r'<TextView\b[^>]*android:id="@\+id/stdtime"[^>]*/>',xml,re.S)
           if not match: raise RuntimeError("Roman clock view missing")
           spacer='''<TextView
               android:id="@+id/roman_top_gap"
