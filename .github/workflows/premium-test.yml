@@ -71,7 +71,7 @@ jobs:
                       rv.setViewVisibility(R.id.countdown, View.GONE)
                   }
           '''
-          edit(p,'                for (i in 0..4) {',countdown+'                for (i in 0..4) {')
+          edit(p,'                val next = if (mins == null) -1 else mins.indexOfFirst { it > nowMin }.let { if (it < 0) 0 else it }','                val next = if (mins == null) -1 else mins.indexOfFirst { it > nowMin }.let { if (it < 0) 0 else it }\n'+countdown)
           edit(p,'if (i == next) st.next else st.accent','if (i == next) st.next else if (st.dimPast && mins != null && mins[i] <= nowMin) 0xFF777777.toInt() else st.accent')
           edit(p,'if (i == next) st.next else st.text','if (i == next) st.next else if (st.dimPast && mins != null && mins[i] <= nowMin) 0xFF888888.toInt() else st.text')
           p=root/"res/layout/widget_jawi.xml"
