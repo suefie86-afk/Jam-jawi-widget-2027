@@ -249,11 +249,11 @@ jobs:
           xml=layout.read_text()
           # Center the standard time by hiding its sibling period and expanding its width.
           for viewid in ("period",):
-              match=re.search(r'<TextView\\b[^>]*android:id="@\\+id/'+viewid+r'"[^>]*/>',xml,re.S)
+              match=re.search(r'<TextView\b[^>]*android:id="@\+id/'+viewid+r'"[^>]*/>',xml,re.S)
               if match:
                   node=match.group(0)
                   xml=xml.replace(node,node.replace('android:visibility="visible"','android:visibility="gone"'))
-          match=re.search(r'<TextView\\b[^>]*android:id="@\\+id/stdtime"[^>]*/>',xml,re.S)
+          match=re.search(r'<TextView\b[^>]*android:id="@\+id/stdtime"[^>]*/>',xml,re.S)
           if not match: raise RuntimeError("Standard clock label missing")
           node=match.group(0)
           node=node.replace('android:layout_width="wrap_content"','android:layout_width="match_parent"')
@@ -266,7 +266,7 @@ jobs:
           code=code.replace('rv.setViewVisibility(R.id.period, if (st.showPeriod) View.VISIBLE else View.GONE)','rv.setViewVisibility(R.id.period, View.GONE)')
           code=code.replace('rv.setViewVisibility(R.id.sky_icon, if (st.showPeriod) View.VISIBLE else View.GONE)','rv.setViewVisibility(R.id.sky_icon, View.VISIBLE)')
           # Prefix location with a pin without hardcoding the city name.
-          code=re.sub(r'(rv\\.setTextViewText\\(R\\.id\\.loc,\\s*)([^\\n]+)(\\))',r'\\1"📍 " + (\\2)\\3',code,count=1)
+          code=re.sub(r'(rv\.setTextViewText\(R\.id\.loc,\s*)([^\n]+)(\))',r'\1"📍 " + (\2)\3',code,count=1)
           # Apply gold two-layer pill to next Jawi prayer name only.
           lines=code.splitlines()
           for i,line in enumerate(lines):
@@ -274,7 +274,7 @@ jobs:
                   lines.insert(i+1,'                    rv.setInt(NAME_IDS[i], "setBackgroundResource", if (i == next) R.drawable.prayer_gold_v6 else R.drawable.prayer_normal_v6)')
                   break
           else: raise RuntimeError("Prayer name coloring not found")
-          p.write_text('\\n'.join(lines)+'\\n')
+          p.write_text('\n'.join(lines)+'\n')
           (root/"res/drawable/prayer_gold_v6.xml").write_text("""<?xml version="1.0" encoding="utf-8"?>
           <shape xmlns:android="http://schemas.android.com/apk/res/android">
             <solid android:color="#B32A2107"/>
