@@ -1,4 +1,4 @@
-name: Build Jam Jawi V6 Selected UI APK
+name: Build Jam Jawi V6 Fixed APK
 on:
   push:
     branches: [premium-test]
@@ -347,5 +347,5 @@ jobs:
         run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: JamJawi-V6-Selected-UI-APK
+          name: JamJawi-V6-Fixed-APK
           path: JawiClock/app/build/outputs/apk/debug/app-debug.apk
