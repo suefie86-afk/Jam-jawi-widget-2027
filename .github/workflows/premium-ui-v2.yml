@@ -1,0 +1,127 @@
+name: Build Premium UI V2 APK
+on:
+  push:
+    branches: [premium-test]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract project
+        run: unzip -q JawiClock.zip
+      - name: Apply premium features
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path("JawiClock/app/src/main")
+          pkg=root/"java/com/example/jawiclock"
+          def edit(path,old,new):
+              s=path.read_text()
+              if old not in s: raise RuntimeError(f"Expected code missing: {path}: {old[:75]}")
+              path.write_text(s.replace(old,new,1))
+          p=pkg/"Prefs.kt"
+          edit(p,'    val zone: String = "",','    val showCountdown: Boolean = true,\n    val dimPast: Boolean = true,\n    val zone: String = "",')
+          edit(p,'            zone = p.getString("zone_$id",','            showCountdown = p.getBoolean("countdown_$id", d.showCountdown),\n            dimPast = p.getBoolean("dimPast_$id", d.dimPast),\n            zone = p.getString("zone_$id",')
+          edit(p,'            .putString("zone_$id",','            .putBoolean("countdown_$id", s.showCountdown)\n            .putBoolean("dimPast_$id", s.dimPast)\n            .putString("zone_$id",')
+          p=pkg/"ConfigActivity.kt"
+          block='''        controls.addView(label("Tema premium (preset warna)"))
+          val themes = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+          listOf("Black Gold", "Emerald", "AMOLED").forEach { name ->
+              themes.addView(Button(this).apply {
+                  text = name
+                  textSize = 11f
+                  setOnClickListener {
+                      style = when (name) {
+                          "Black Gold" -> style.copy(clock = Color.parseColor("#E8C675"), accent = Color.parseColor("#D7B66A"), next = Color.parseColor("#F4D68D"), bg = Color.BLACK, bgAlpha = 100, bgImage = false)
+                          "Emerald" -> style.copy(clock = Color.parseColor("#E9D38A"), accent = Color.parseColor("#8CC9A8"), next = Color.parseColor("#48E09A"), bg = Color.parseColor("#081B16"), bgAlpha = 100, bgImage = false)
+                          else -> style.copy(clock = Color.WHITE, accent = Color.parseColor("#D4AF67"), next = Color.parseColor("#7EE0B1"), bg = Color.BLACK, bgAlpha = 100, bgImage = false)
+                      }
+                      refresh()
+                  }
+              }, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+          }
+          controls.addView(themes)
+          controls.addView(CheckBox(this).apply {
+              text = "Countdown waktu solat seterusnya"
+              setTextColor(Color.WHITE)
+              isChecked = style.showCountdown
+              setOnCheckedChangeListener { _, checked -> style = style.copy(showCountdown = checked); refresh() }
+          })
+          controls.addView(CheckBox(this).apply {
+              text = "Malapkan waktu solat yang sudah berlalu"
+              setTextColor(Color.WHITE)
+              isChecked = style.dimPast
+              setOnCheckedChangeListener { _, checked -> style = style.copy(dimPast = checked); refresh() }
+          })
+          '''
+          edit(p,'        controls.addView(label("Warna jam besar"))',block+'\n        controls.addView(label("Warna jam besar"))')
+          p=pkg/"JawiWidget.kt"
+          edit(p,'            rv.setTextViewTextSize(R.id.stdtime, TypedValue.COMPLEX_UNIT_SP, 14f * k)','            rv.setTextViewTextSize(R.id.stdtime, TypedValue.COMPLEX_UNIT_SP, 14f * k)\n            rv.setTextViewTextSize(R.id.countdown, TypedValue.COMPLEX_UNIT_SP, 11f * k)')
+          edit(p,'                rv.setViewVisibility(R.id.loc, View.GONE)','                rv.setViewVisibility(R.id.loc, View.GONE)\n                rv.setViewVisibility(R.id.countdown, View.GONE)')
+          countdown='''                if (mins != null && st.showCountdown) {
+                      val target = if (next == 0 && mins[0] <= nowMin) mins[0] + 1440 else mins[next]
+                      val remaining = (target - nowMin).coerceAtLeast(0)
+                      val names = arrayOf("Subuh", "Zohor", "Asar", "Maghrib", "Isyak")
+                      rv.setTextViewText(R.id.countdown, "${names[next]} dalam ${remaining / 60}j ${remaining % 60}m")
+                      rv.setTextColor(R.id.countdown, st.accent)
+                      rv.setViewVisibility(R.id.countdown, View.VISIBLE)
+                  } else {
+                      rv.setViewVisibility(R.id.countdown, View.GONE)
+                  }
+          '''
+          edit(p,'                val next = if (mins == null) -1 else mins.indexOfFirst { it > nowMin }.let { if (it < 0) 0 else it }','                val next = if (mins == null) -1 else mins.indexOfFirst { it > nowMin }.let { if (it < 0) 0 else it }\n'+countdown)
+          edit(p,'if (i == next) st.next else st.accent','if (i == next) st.next else if (st.dimPast && mins != null && mins[i] <= nowMin) 0xFF777777.toInt() else st.accent')
+          edit(p,'if (i == next) st.next else st.text','if (i == next) st.next else if (st.dimPast && mins != null && mins[i] <= nowMin) 0xFF888888.toInt() else st.text')
+          p=root/"res/layout/widget_jawi.xml"
+          xml='''        <TextView
+              android:id="@+id/countdown"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:gravity="center"
+              android:layout_marginTop="3dp"
+              android:includeFontPadding="false"
+              android:fontFamily="sans-serif-medium"
+              android:textColor="#E6C86E"
+              android:textSize="12sp"
+              android:visibility="gone" />
+
+          '''
+          edit(p,'        <TextView\n            android:id="@+id/loc"',xml+'        <TextView\n            android:id="@+id/loc"')
+          print("Premium patches applied")
+          # Premium UI V2: elegant clock glow and countdown pill
+          layout = root/"res/layout/widget_jawi.xml"
+          xmlv2 = layout.read_text()
+          xmlv2 = xmlv2.replace('android:shadowRadius="16"', 'android:shadowRadius="7"')
+          xmlv2 = xmlv2.replace('android:shadowColor="#99FFD600"', 'android:shadowColor="#55D8B35A"')
+          target = 'android:id="@+id/countdown"'
+          if target not in xmlv2: raise RuntimeError("Countdown view missing")
+          start = xmlv2.index('<TextView', xmlv2.index(target)-50) if '<TextView' in xmlv2[xmlv2.index(target)-50:xmlv2.index(target)] else xmlv2.rfind('<TextView',0,xmlv2.index(target))
+          end = xmlv2.index('/>',xmlv2.index(target))+2
+          original = xmlv2[start:end]
+          modified = original.replace('android:layout_width="match_parent"', 'android:layout_width="wrap_content"').replace('android:gravity="center"', 'android:gravity="center"\n              android:layout_gravity="center_horizontal"\n              android:paddingStart="16dp"\n              android:paddingEnd="16dp"\n              android:paddingTop="6dp"\n              android:paddingBottom="6dp"\n              android:background="@drawable/countdown_pill_v2"')
+          xmlv2 = xmlv2[:start]+modified+xmlv2[end:]
+          layout.write_text(xmlv2)
+          (root/"res/drawable/countdown_pill_v2.xml").write_text("""<?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+              <solid android:color="#D0101915"/>
+              <stroke android:width="1dp" android:color="#A08C7549"/>
+              <corners android:radius="24dp"/>
+          </shape>""")
+          print("Premium UI V2 applied")
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build Premium APK
+        working-directory: JawiClock
+        run: gradle assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JamJawi-Premium-UI-V2-APK
+          path: JawiClock/app/build/outputs/apk/debug/app-debug.apk
