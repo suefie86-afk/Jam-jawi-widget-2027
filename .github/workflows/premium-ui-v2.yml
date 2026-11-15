@@ -1,4 +1,4 @@
-name: Build Jam Jawi V6 Fixed APK
+name: Build Jam Jawi V7 Clean Layout APK
 on:
   push:
     branches: [premium-test]
@@ -289,6 +289,51 @@ jobs:
             <corners android:radius="20dp"/>
           </shape>""")
           print("V6 final layout applied")
+          # V7: revert prayer label pills; remove obsolete period controls;
+          # adjustable vertical gap between Roman clock and countdown.
+          p=pkg/"JawiWidget.kt"
+          code=p.read_text()
+          code='\n'.join(line for line in code.splitlines() if 'rv.setInt(NAME_IDS[i], "setBackgroundResource"' not in line)+'\n'
+          code=code.replace('rv.setViewVisibility(R.id.period, View.GONE)','rv.setViewVisibility(R.id.period, View.GONE)')
+          p.write_text(code)
+          p=pkg/"ConfigActivity.kt"
+          code=p.read_text()
+          import re
+          code=re.sub(r'        controls.addView\(label\("Paparan Malam / Pagi / Petang"\)\).*?(?=        controls.addView\(label\("Tema premium \(preset warna\)"\)\))','',code,flags=re.S)
+          controls='''        controls.addView(seek("Jarak jam Rumi ke countdown", 48, style.clockGapDp, { "${it} dp" }) {
+              style = style.copy(clockGapDp = it)
+              refresh()
+          })
+          '''
+          marker='        controls.addView(label("Tema premium (preset warna)"))'
+          if marker not in code: raise RuntimeError("Theme controls anchor missing")
+          code=code.replace(marker,controls+marker,1)
+          p.write_text(code)
+          p=pkg/"Prefs.kt"
+          edit(p,'    val showCountdown: Boolean = true,','    val clockGapDp: Int = 12,\n    val showCountdown: Boolean = true,')
+          edit(p,'            showCountdown = p.getBoolean("countdown_$id",','            clockGapDp = p.getInt("clockGapDp_$id", d.clockGapDp),\n            showCountdown = p.getBoolean("countdown_$id",')
+          edit(p,'            .putBoolean("countdown_$id",','            .putInt("clockGapDp_$id", s.clockGapDp)\n            .putBoolean("countdown_$id",')
+          # RemoteViews cannot change XML margins directly. Set a spacer height at render time.
+          layout=root/"res/layout/widget_jawi.xml"
+          xml=layout.read_text()
+          ix=xml.find('android:id="@+id/countdown"')
+          if ix<0: raise RuntimeError("Countdown layout missing")
+          start=xml.rfind('<TextView',0,ix)
+          spacer='''<TextView
+              android:id="@+id/clock_gap"
+              android:layout_width="1dp"
+              android:layout_height="12dp"
+              android:visibility="visible" />
+          '''
+          xml=xml[:start]+spacer+xml[start:]
+          layout.write_text(xml)
+          p=pkg/"JawiWidget.kt"
+          code=p.read_text()
+          anchor='            rv.setTextViewTextSize(R.id.countdown, TypedValue.COMPLEX_UNIT_SP, 11f * k)'
+          if anchor not in code: raise RuntimeError("Countdown sizing anchor missing")
+          code=code.replace(anchor,anchor+'\n            rv.setViewLayoutHeight(R.id.clock_gap, st.clockGapDp.toFloat(), TypedValue.COMPLEX_UNIT_DIP)',1)
+          p.write_text(code)
+          print("V7 simplified prayer labels and adjustable vertical gap")
           PY
       - name: Render moon and sun artwork
         run: |
@@ -347,5 +392,5 @@ jobs:
         run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: JamJawi-V6-Fixed-APK
+          name: JamJawi-V7-Clean-Layout-APK
           path: JawiClock/app/build/outputs/apk/debug/app-debug.apk
