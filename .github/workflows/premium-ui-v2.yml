@@ -1,4 +1,4 @@
-name: Build Jam Jawi V9 Realistic Sun APK
+name: Build Jam Jawi V10 Sun Rays APK
 on:
   push:
     branches: [premium-test]
@@ -403,6 +403,25 @@ jobs:
                   alpha=PIL.ImageChops.subtract(alpha,cut)
                   body.putalpha(alpha)
               else:
+                  # V10: luminous tapered sun rays behind the realistic solar disc.
+                  rays=Image.new("RGBA",(w,h),(0,0,0,0))
+                  raydraw=ImageDraw.Draw(rays)
+                  cx,cy=160,132
+                  for j in range(20):
+                      angle=2*math.pi*j/20
+                      inner=74+(j%3)*3
+                      outer=115+(j%4)*8
+                      spread=0.024 if j%2 else 0.035
+                      tip=(cx+outer*math.cos(angle),cy+outer*math.sin(angle))
+                      left=(cx+inner*math.cos(angle-spread),cy+inner*math.sin(angle-spread))
+                      right=(cx+inner*math.cos(angle+spread),cy+inner*math.sin(angle+spread))
+                      raydraw.polygon([left,tip,right],fill=(255,187,52,190 if j%2 else 235))
+                  rays=rays.filter(ImageFilter.GaussianBlur(2.4))
+                  im=Image.alpha_composite(im,rays)
+                  halo=Image.new("RGBA",(w,h),(0,0,0,0))
+                  hd=ImageDraw.Draw(halo)
+                  hd.ellipse((66,38,254,226),outline=(255,211,90,180),width=8)
+                  im=Image.alpha_composite(im,halo.filter(ImageFilter.GaussianBlur(8)))
                   # Photographic-looking solar disc: smooth radial luminance, no concentric rings.
                   from PIL import ImageEnhance
                   import math
@@ -446,5 +465,5 @@ jobs:
         run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: JamJawi-V9-Realistic-Sun-APK
+          name: JamJawi-V10-Sun-Rays-APK
           path: JawiClock/app/build/outputs/apk/debug/app-debug.apk
