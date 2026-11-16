@@ -1,4 +1,4 @@
-name: Build Jam Jawi V12 Sun and Row Spacing APK
+name: Build Jam Jawi V12 Row Spacing APK
 on:
   push:
     branches: [premium-test]
@@ -374,9 +374,9 @@ jobs:
           p=pkg/"Prefs.kt"
           fields=["gapLocation","gapHijri","gapGregorian"]
           for key in fields:
-              edit(p,'    val romanTopGapDp: Int = 12,',f'    val {key}: Int = 4,\\n    val romanTopGapDp: Int = 12,')
-              edit(p,'            romanTopGapDp = p.getInt("romanTopGapDp_$id",',f'            {key} = p.getInt("{key}_$id", d.{key}),\\n            romanTopGapDp = p.getInt("romanTopGapDp_$id",')
-              edit(p,'            .putInt("romanTopGapDp_$id",',f'            .putInt("{key}_$id", s.{key})\\n            .putInt("romanTopGapDp_$id",')
+              edit(p,'    val romanTopGapDp: Int = 12,',f'    val {key}: Int = 4,\n    val romanTopGapDp: Int = 12,')
+              edit(p,'            romanTopGapDp = p.getInt("romanTopGapDp_$id",',f'            {key} = p.getInt("{key}_$id", d.{key}),\n            romanTopGapDp = p.getInt("romanTopGapDp_$id",')
+              edit(p,'            .putInt("romanTopGapDp_$id",',f'            .putInt("{key}_$id", s.{key})\n            .putInt("romanTopGapDp_$id",')
           p=pkg/"ConfigActivity.kt"
           code=p.read_text()
           marker='        controls.addView(label("Tema premium (preset warna)"))'
@@ -394,15 +394,15 @@ jobs:
           xml=layout.read_text()
           import re
           # Locate city row, then take next two TextView rows in layout order.
-          views=list(re.finditer(r'<TextView\\b[^>]*android:id="@\\+id/([^"]+)"[^>]*/>',xml,re.S))
+          views=list(re.finditer(r'<TextView\b[^>]*android:id="@\+id/([^"]+)"[^>]*/>',xml,re.S))
           locidx=next((i for i,m in enumerate(views) if m.group(1)=="loc"),None)
           if locidx is None or len(views)<locidx+3: raise RuntimeError("Cannot identify city and date rows")
           target_ids=[views[locidx+i].group(1) for i in range(3)]
           for target,spacer_id in zip(target_ids,["gap_location_v12","gap_hijri_v12","gap_gregorian_v12"]):
-              pattern=r'<TextView\\b[^>]*android:id="@\\+id/'+re.escape(target)+r'"[^>]*/>'
+              pattern=r'<TextView\b[^>]*android:id="@\+id/'+re.escape(target)+r'"[^>]*/>'
               match=re.search(pattern,xml,re.S)
               if not match: raise RuntimeError("Missing target "+target)
-              spacer=f'<TextView android:id="@+id/{spacer_id}" android:layout_width="1dp" android:layout_height="4dp" />\\n'
+              spacer=f'<TextView android:id="@+id/{spacer_id}" android:layout_width="1dp" android:layout_height="4dp" />\n'
               xml=xml[:match.start()]+spacer+xml[match.start():]
           layout.write_text(xml)
           p=pkg/"JawiWidget.kt"
@@ -410,7 +410,7 @@ jobs:
           marker='            rv.setViewLayoutHeight(R.id.roman_top_gap, st.romanTopGapDp.toFloat(), TypedValue.COMPLEX_UNIT_DIP)'
           if marker not in code: raise RuntimeError("Roman spacing anchor missing")
           for key,spacer_id in [("gapLocation","gap_location_v12"),("gapHijri","gap_hijri_v12"),("gapGregorian","gap_gregorian_v12")]:
-              marker+='\\n            rv.setViewLayoutHeight(R.id.'+spacer_id+', st.'+key+'.toFloat(), TypedValue.COMPLEX_UNIT_DIP)'
+              marker+='\n            rv.setViewLayoutHeight(R.id.'+spacer_id+', st.'+key+'.toFloat(), TypedValue.COMPLEX_UNIT_DIP)'
           code=code.replace('            rv.setViewLayoutHeight(R.id.roman_top_gap, st.romanTopGapDp.toFloat(), TypedValue.COMPLEX_UNIT_DIP)',marker,1)
           p.write_text(code)
           print("V12 independent row spacing controls added")
