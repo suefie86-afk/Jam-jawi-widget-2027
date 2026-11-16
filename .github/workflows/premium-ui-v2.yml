@@ -558,7 +558,7 @@ jobs:
           manifest=root/"AndroidManifest.xml"
           xml=manifest.read_text()
           if '</application>' not in xml: raise RuntimeError("Application manifest missing")
-          xml=xml.replace('</application>', '<activity android:name=".SkyImageActivity" android:exported="false" />\\n    </application>',1)
+          xml=xml.replace('</application>', '<activity android:name=".SkyImageActivity" android:exported="false" />\n    </application>',1)
           manifest.write_text(xml)
           p=pkg/"JawiWidget.kt"
           code=p.read_text()
