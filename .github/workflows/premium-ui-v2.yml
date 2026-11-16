@@ -571,7 +571,7 @@ jobs:
                     if (customSkyBitmap != null) rv.setImageViewBitmap(R.id.sky_icon, customSkyBitmap)
                 } catch (_: Exception) { }
             }'''
-          code=code.replace(marker,marker+'\\n            '+extra,1)
+          code=code.replace(marker,marker+'\n            '+extra,1)
           p.write_text(code)
           print("V17 custom day/night images added")
 
