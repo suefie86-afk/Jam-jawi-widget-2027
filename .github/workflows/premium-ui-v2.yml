@@ -442,6 +442,139 @@ jobs:
           code=code.replace(old,new,1)
           p.write_text(code)
           print("V14 adjustable Jawi clock reserved height applied")
+          # V17: allow user-supplied transparent PNG/JPG for day and night artwork.
+          # Images are stored privately; existing artwork remains the fallback.
+          p=pkg/"ConfigActivity.kt"
+          code=p.read_text()
+          marker='        controls.addView(label("Tema premium (preset warna)"))'
+          if marker not in code: raise RuntimeError("V17 controls anchor missing")
+          controls='''        controls.addView(label("Gambar matahari / bulan sendiri"))
+          controls.addView(Button(this).apply {
+              text = "PILIH GAMBAR MATAHARI"
+              setOnClickListener {
+                  startActivity(android.content.Intent(this@ConfigActivity, SkyImageActivity::class.java).putExtra("slot", "sun"))
+              }
+          })
+          controls.addView(Button(this).apply {
+              text = "PILIH GAMBAR BULAN"
+              setOnClickListener {
+                  startActivity(android.content.Intent(this@ConfigActivity, SkyImageActivity::class.java).putExtra("slot", "moon"))
+              }
+          })
+          '''
+          code=code.replace(marker,controls+marker,1)
+          p.write_text(code)
+          # Explicit package class, independent of existing ConfigActivity imports.
+          (pkg/"SkyImageActivity.kt").write_text('''package com.example.jawiclock
+
+          import android.app.Activity
+          import android.os.Bundle
+          import android.content.Intent
+          import android.appwidget.AppWidgetManager
+          import android.content.ComponentName
+          import android.graphics.Bitmap
+          import android.graphics.BitmapFactory
+          import android.widget.Button
+          import android.widget.LinearLayout
+          import android.widget.TextView
+          import android.widget.Toast
+          import java.io.File
+
+          class SkyImageActivity : Activity() {
+              private val pickerRequest = 2027
+              private var slot = "sun"
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  slot = if (intent.getStringExtra("slot") == "moon") "moon" else "sun"
+                  val root = LinearLayout(this).apply {
+                      orientation = LinearLayout.VERTICAL
+                      setPadding(30, 36, 30, 24)
+                      setBackgroundColor(android.graphics.Color.rgb(24,24,24))
+                  }
+                  root.addView(TextView(this).apply {
+                      text = if (slot == "sun") "Gambar Matahari" else "Gambar Bulan"
+                      textSize = 22f
+                      setTextColor(android.graphics.Color.WHITE)
+                  })
+                  root.addView(TextView(this).apply {
+                      text = "Pilih PNG lutsinar untuk hasil terbaik. Gambar akan dikecilkan automatik."
+                      setTextColor(android.graphics.Color.LTGRAY)
+                  })
+                  root.addView(Button(this).apply {
+                      text = "PILIH DARI GALERI / FAIL"
+                      setOnClickListener {
+                          val i = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                              addCategory(Intent.CATEGORY_OPENABLE)
+                              type = "image/*"
+                          }
+                          startActivityForResult(i, pickerRequest)
+                      }
+                  })
+                  root.addView(Button(this).apply {
+                      text = "RESET GAMBAR ASAL"
+                      setOnClickListener {
+                          File(filesDir, "custom_sky_" + slot + ".png").delete()
+                          notifyWidget()
+                          Toast.makeText(this@SkyImageActivity, "Gambar asal dipulihkan", Toast.LENGTH_SHORT).show()
+                          finish()
+                      }
+                  })
+                  setContentView(root)
+              }
+              override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+                  super.onActivityResult(requestCode, resultCode, data)
+                  if (requestCode != pickerRequest || resultCode != RESULT_OK) return
+                  val uri = data?.data ?: return
+                  try {
+                      val source = contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+                          ?: throw IllegalArgumentException("Gambar tidak dapat dibaca")
+                      val maxSide = 480
+                      val factor = minOf(1f, maxSide.toFloat() / maxOf(source.width, source.height))
+                      val width = maxOf(1, (source.width * factor).toInt())
+                      val height = maxOf(1, (source.height * factor).toInt())
+                      val scaled = Bitmap.createScaledBitmap(source, width, height, true)
+                      File(filesDir, "custom_sky_" + slot + ".png").outputStream().use {
+                          if (!scaled.compress(Bitmap.CompressFormat.PNG, 100, it)) throw IllegalStateException("Save failed")
+                      }
+                      notifyWidget()
+                      Toast.makeText(this, "Gambar disimpan", Toast.LENGTH_SHORT).show()
+                      finish()
+                  } catch (e: Exception) {
+                      Toast.makeText(this, "Gagal: " + (e.message ?: "fail tidak sah"), Toast.LENGTH_LONG).show()
+                  }
+              }
+              private fun notifyWidget() {
+                  val manager = AppWidgetManager.getInstance(this)
+                  val ids = manager.getAppWidgetIds(ComponentName(this, JawiWidget::class.java))
+                  if (ids.isNotEmpty()) {
+                      sendBroadcast(Intent(this, JawiWidget::class.java).apply {
+                          action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                          putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+                      })
+                  }
+              }
+          }
+          ''')
+          manifest=root/"AndroidManifest.xml"
+          xml=manifest.read_text()
+          if '</application>' not in xml: raise RuntimeError("Application manifest missing")
+          xml=xml.replace('</application>', '<activity android:name=".SkyImageActivity" android:exported="false" />\\n    </application>',1)
+          manifest.write_text(xml)
+          p=pkg/"JawiWidget.kt"
+          code=p.read_text()
+          marker='rv.setImageViewResource(R.id.sky_icon, if (skyHour >= 19 || skyHour < 6) R.drawable.moon_cloud_v4 else R.drawable.sun_cloud_v4)'
+          if marker not in code: raise RuntimeError("Sky image rendering anchor missing")
+          extra='''val customSkyFile = java.io.File(context.filesDir, if (skyHour >= 19 || skyHour < 6) "custom_sky_moon.png" else "custom_sky_sun.png")
+            if (customSkyFile.exists()) {
+                try {
+                    val customSkyBitmap = android.graphics.BitmapFactory.decodeFile(customSkyFile.absolutePath)
+                    if (customSkyBitmap != null) rv.setImageViewBitmap(R.id.sky_icon, customSkyBitmap)
+                } catch (_: Exception) { }
+            }'''
+          code=code.replace(marker,marker+'\\n            '+extra,1)
+          p.write_text(code)
+          print("V17 custom day/night images added")
+
 
 
           PY
@@ -530,5 +663,5 @@ jobs:
         run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: JamJawi-V16-Clean-Golden-Sun-APK
+          name: JamJawi-V17-Custom-Sky-APK
           path: JawiClock/app/build/outputs/apk/debug/app-debug.apk
