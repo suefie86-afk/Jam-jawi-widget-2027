@@ -1,4 +1,4 @@
-name: Build Jam Jawi V12 Row Spacing APK
+name: Build Jam Jawi V13 Roman Gap Fix APK
 on:
   push:
     branches: [premium-test]
@@ -414,6 +414,25 @@ jobs:
           code=code.replace('            rv.setViewLayoutHeight(R.id.roman_top_gap, st.romanTopGapDp.toFloat(), TypedValue.COMPLEX_UNIT_DIP)',marker,1)
           p.write_text(code)
           print("V12 independent row spacing controls added")
+          # V13: remove fixed vertical margin on Roman clock, so 0dp really means close.
+          # Keep all user-controlled spacers and other layout sections intact.
+          p=root/"res/layout/widget_jawi.xml"
+          xml=p.read_text()
+          import re
+          pattern=r'(<TextView\\b[^>]*android:id="@\\+id/stdtime"[^>]*/>)'
+          match=re.search(pattern,xml,re.S)
+          if not match: raise RuntimeError("Roman clock XML view missing")
+          view=match.group(1)
+          view=re.sub(r'\\s+android:layout_marginTop="[^"]+"','',view)
+          view=re.sub(r'\\s+android:layout_marginBottom="[^"]+"','',view)
+          xml=xml[:match.start()]+view+xml[match.end():]
+          # Remove fixed bottom margin on the Jawi-clock row only when directly identifiable.
+          # The adjustable roman_top_gap remains the sole intended gap control.
+          gap_pos=xml.find('android:id="@+id/roman_top_gap"')
+          if gap_pos<0: raise RuntimeError("Adjustable Roman spacer missing")
+          p.write_text(xml)
+          print("V13 removed Roman time fixed margins")
+
           PY
       - name: Render moon and sun artwork
         run: |
@@ -514,5 +533,5 @@ jobs:
         run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: JamJawi-V12-Sun-Spacing-APK
+          name: JamJawi-V13-Roman-Gap-Fix-APK
           path: JawiClock/app/build/outputs/apk/debug/app-debug.apk
