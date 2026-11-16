@@ -564,7 +564,7 @@ jobs:
           code=p.read_text()
           marker='rv.setImageViewResource(R.id.sky_icon, if (skyHour >= 19 || skyHour < 6) R.drawable.moon_cloud_v4 else R.drawable.sun_cloud_v4)'
           if marker not in code: raise RuntimeError("Sky image rendering anchor missing")
-          extra='''val customSkyFile = java.io.File(context.filesDir, if (skyHour >= 19 || skyHour < 6) "custom_sky_moon.png" else "custom_sky_sun.png")
+          extra='''val customSkyFile = java.io.File("/data/user/0/com.example.jawiclock/files", if (skyHour >= 19 || skyHour < 6) "custom_sky_moon.png" else "custom_sky_sun.png")
             if (customSkyFile.exists()) {
                 try {
                     val customSkyBitmap = android.graphics.BitmapFactory.decodeFile(customSkyFile.absolutePath)
