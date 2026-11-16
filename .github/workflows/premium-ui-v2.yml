@@ -1,4 +1,4 @@
-name: Build Jam Jawi V8 Roman Spacing APK
+name: Build Jam Jawi V9 Realistic Sun APK
 on:
   push:
     branches: [premium-test]
@@ -403,9 +403,28 @@ jobs:
                   alpha=PIL.ImageChops.subtract(alpha,cut)
                   body.putalpha(alpha)
               else:
-                  b.ellipse((75,45,245,215),fill=(255,215,95,255))
-                  for rad in range(90,30,-10):
-                      b.ellipse((160-rad,130-rad,160+rad,130+rad),outline=(255,241,160,120),width=3)
+                  # Photographic-looking solar disc: smooth radial luminance, no concentric rings.
+                  from PIL import ImageEnhance
+                  import math
+                  pix=body.load()
+                  cx,cy,radius=160,132,81
+                  for yy in range(45,220):
+                      for xx in range(70,251):
+                          rr=math.hypot(xx-cx,yy-cy)/radius
+                          if rr>1: continue
+                          edge=max(0,min(1,(1-rr)*14))
+                          grain=random.uniform(-6,6)
+                          warmth=rr**1.5
+                          red=255
+                          green=int(max(0,min(255,249-36*warmth+grain)))
+                          blue=int(max(0,min(255,204-133*warmth+grain)))
+                          pix[xx,yy]=(red,green,blue,int(255*edge))
+                  # Soft atmospheric glow behind the solar surface.
+                  corona=Image.new("RGBA",(w,h),(0,0,0,0))
+                  co=ImageDraw.Draw(corona)
+                  co.ellipse((53,25,267,239),fill=(255,179,54,125))
+                  corona=corona.filter(ImageFilter.GaussianBlur(29))
+                  im=Image.alpha_composite(im,corona)
               im=Image.alpha_composite(im,body)
               clouds=Image.new("RGBA",(w,h),(0,0,0,0));c=ImageDraw.Draw(clouds)
               for x,y,rx,ry in [(100,220,90,27),(178,231,102,34),(248,216,78,24),(48,242,67,23)]:
@@ -427,5 +446,5 @@ jobs:
         run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: JamJawi-V8-Roman-Spacing-APK
+          name: JamJawi-V9-Realistic-Sun-APK
           path: JawiClock/app/build/outputs/apk/debug/app-debug.apk
