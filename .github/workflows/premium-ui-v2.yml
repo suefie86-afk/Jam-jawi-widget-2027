@@ -383,7 +383,7 @@ jobs:
           if marker not in code: raise RuntimeError("Theme anchor not found")
           newcontrols=""
           for label,key in [("Jarak countdown ke Melaka","gapLocation"),("Jarak Melaka ke tarikh Hijri","gapHijri"),("Jarak Hijri ke tarikh Rumi","gapGregorian")]:
-              newcontrols+=f'''        controls.addView(seek("{label}", 36, style.{key}, {{ "${{it}} dp" }}) {{
+              newcontrols+=f'''        controls.addView(seek("{label}", 36, style.{key}, {{ "$it dp" }}) {{
               style = style.copy({key} = it)
               refresh()
           }})
