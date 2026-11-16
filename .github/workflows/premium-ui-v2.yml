@@ -419,12 +419,12 @@ jobs:
           p=root/"res/layout/widget_jawi.xml"
           xml=p.read_text()
           import re
-          pattern=r'(<TextView\\b[^>]*android:id="@\\+id/stdtime"[^>]*/>)'
+          pattern=r'(<TextView\b[^>]*android:id="@\+id/stdtime"[^>]*/>)'
           match=re.search(pattern,xml,re.S)
           if not match: raise RuntimeError("Roman clock XML view missing")
           view=match.group(1)
-          view=re.sub(r'\\s+android:layout_marginTop="[^"]+"','',view)
-          view=re.sub(r'\\s+android:layout_marginBottom="[^"]+"','',view)
+          view=re.sub(r'\s+android:layout_marginTop="[^"]+"','',view)
+          view=re.sub(r'\s+android:layout_marginBottom="[^"]+"','',view)
           xml=xml[:match.start()]+view+xml[match.end():]
           # Remove fixed bottom margin on the Jawi-clock row only when directly identifiable.
           # The adjustable roman_top_gap remains the sole intended gap control.
