@@ -1,4 +1,4 @@
-name: Build Jam Jawi V13 Roman Gap Fix APK
+name: Build Jam Jawi V14 Clock Height Fix APK
 on:
   push:
     branches: [premium-test]
@@ -432,6 +432,17 @@ jobs:
           if gap_pos<0: raise RuntimeError("Adjustable Roman spacer missing")
           p.write_text(xml)
           print("V13 removed Roman time fixed margins")
+          # V14: the real gap comes from the oversized Jawi time TextView height.
+          # At slider 0, reduce the reserved clock height; keep a safe minimum for glyphs.
+          p=pkg/"JawiWidget.kt"
+          code=p.read_text()
+          old='rv.setViewLayoutHeight(R.id.time, 1.34f * em, TypedValue.COMPLEX_UNIT_SP)'
+          new='rv.setViewLayoutHeight(R.id.time, (1.12f + st.romanTopGapDp / 48f * 0.22f) * em, TypedValue.COMPLEX_UNIT_SP)'
+          if old not in code: raise RuntimeError("Original Jawi clock height expression not found")
+          code=code.replace(old,new,1)
+          p.write_text(code)
+          print("V14 adjustable Jawi clock reserved height applied")
+
 
           PY
       - name: Render moon and sun artwork
@@ -533,5 +544,5 @@ jobs:
         run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: JamJawi-V13-Roman-Gap-Fix-APK
+          name: JamJawi-V14-Clock-Height-Fix-APK
           path: JawiClock/app/build/outputs/apk/debug/app-debug.apk
